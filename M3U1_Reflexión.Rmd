@@ -1,0 +1,171 @@
+---
+title: <span style="color:#FF7F00">**M3U1_Reflexion**
+author: " "
+date: " "
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+c1="034a94" #color naranja-primario
+c2="FF7F00" #color azul oscuro-secundario
+c3="0EB0C6" #color azul claro-terciario
+c4="-686868" #color gris-texto
+
+```
+
+
+Uno de los problemas de las redes neuronales son los valores de entrenamiento de las series, los cuales se pueden tomar al azar, sin embargo, si se cambia el resultado puede
+ser diferente, por lo que en este ejemplo, simularemos un conjunto de datos caótico y ver el ajuste de los modelos.
+
+## <span style="color:#034a94"> **Datos simulados**
+
+En este caso, simulamos datos con un comportamiento caótico, por ejemplo, con la estructura $$ X_{t+1}=\delta X_{t}(1-X_{t})$$.  Lo cual corresponde a la función logística.
+Donde generamos $1000$ valores, que oscilan entre (0,1). Dado que son valores pequeños, podemos escarlalos.
+
+La dinámica caótica da a la serie una estructura compleja, haciendo muy difícil o imposible la predicción de valores futuros.
+
+```{r}
+require(RSNNS)
+require(quantmod)
+slog<-as.ts(read.csv("logistic-x.csv",F))
+```
+
+Cuando el parámetro $\mu$ toma valores aproximadamente superiores a $3.5$, la dinámica de la serie generada se vuelve caótica. En el archivo para la serie logística, se usó un valor inicial de $0.1$ para $X$ y un valor de $3.95$ para $\mu$.
+
+Como tenemos $1000$ valores, entrenaremos la red con una muestra de $900$
+
+```{r}
+train<-1:900
+```
+
+
+También, definimos como variables de entrenamiento en serie, los $n$ valores anteriores de la misma. La elección de $n$ es arbitraria, acá seleccioné $10$ valores, pero, dependiendo de la naturaleza del problema que estemos tratando, puede ser conveniente otro valor. Por ejemplo, si tenemos valores mensuales de una variable, $12$ podría ser un mejor valor para $n$. Lo que haremos será crear un marco de datos con $n$ columnas, cada una de las cuales se construye avanzando un valor de la serie en el futuro, a través de una variable de tipo zoo:
+
+```{r}
+y<-as.zoo(slog)
+x1<-Lag(y,k=1)
+x2<-Lag(y,k=2)
+x3<-Lag(y,k=3)
+x4<-Lag(y,k=4)
+x5<-Lag(y,k=5)
+x6<-Lag(y,k=6)
+x7<-Lag(y,k=7)
+x8<-Lag(y,k=8)
+x9<-Lag(y,k=9)
+x10<-Lag(y,k=10)
+slog<-cbind(y,x1,x2,x3,x4,x5,x6,x7,x8,x9,x10)
+```
+
+Más aún, eliminamos los valoers **NA** que se producen desplazar la serie
+
+```{r}
+slog<-slog[-(1:10),]
+```
+
+Definimos por conveniencia, los valores de entrada y salida de la red neuronal
+
+```{r}
+inputs<-slog[,2:11]
+outputs<-slog[,1]
+```
+
+Ahora podemos crear una red Elman y entrenarla
+
+```{r}
+fit<-elman(inputs[train],
+ outputs[train],
+ size=c(3,2),
+ learnFuncParams=c(0.1),
+ maxit=5000)
+```
+
+El tercer parámetro indica que queremos crear dos capas ocultas, una con tres neuronas y otra con dos.  
+
+Indicamos una tasa de aprendizaje de $0.1$, y también un número máximo de iteraciones de $5000$. Con la función plotIterativeError podemos ver cómo ha evolucionado el error de red a lo largo de las iteraciones de entrenamiento
+
+```{r}
+plotIterativeError(fit)
+```
+
+Como podemos ver, el error converge a cero muy rápidamente. Ahora hagamos una predicción con los términos restantes de la serie, la cual tiene la siguiente apariencia gráfica:
+
+```{r}
+y<-as.vector(outputs[-train])
+plot(y,type="l")
+pred<-predict(fit,inputs[-train])
+lines(pred,col="red")
+```
+
+
+Si superponemos la predicción sobre la serie original, podemos ver que la aproximación es muy buena
+
+
+Llegados a este punto, la pregunta que puede surgir es: ¿hemos hecho una predicción perfecta de una serie caótica? pero no es eso imposible? La respuesta es que lo que realmente sucedió aquí es que la red neuronal ha "aprendido" perfectamente la función logística y es capaz de predecir bastante bien el próximo valor de cualquier otra.
+
+De hecho, todos los valores pronosticados se han realizado a partir de $10$ valores reales anteriores de la serie, si intenta predecir nuevos términos utilizando como valores de entrada otros predichos previamente, debido a la naturaleza caótica de la serie y su sensibilidad a las condiciones iniciales , el la precisión se pierde rápidamente, lo que es consistente con la teoría del caos en el sentido de que los fenómenos caóticos solo son predecibles en muy poco tiempo. En cualquier caso, gracias al efecto memoria podemos adelantar la serie en al menos un valor con muy buena precisión, lo que puede ser muy útil en algunas aplicaciones.
+
+Si queremos realizar la misma prueba con una red Jordan , el comando a utilizar es el siguiente
+
+```{r}
+fit<-jordan(inputs[train],
+ outputs[train],
+ size=4,
+ learnFuncParams=c(0.01),
+ maxit=5000)
+```
+
+Con este comando hemos solicitado cuatro capas ocultas y un factor de tasa de aprendizaje de $0.01$. El resultado también se ajusta bastante bien a la serie original
+
+```{r}
+pred<-predict(fit,inputs[-train])
+plot(y,type="l")
+lines(pred,col="red")
+```
+
+Como la serie generada por la ecuación logística, en el dominio caótico, es sensible a las condiciones iniciales, puede generar otra serie con el mismo parámetro pero comenzando con un valor diferente en lugar de $0.1$, dentro del rango $(0,1)$. Esto generará una serie totalmente diferente a la que usamos para entrenar la red, y pueden ver que el modelo es capaz de predecir también los valores de la sección de la nueva serie que queremos, lo que indica que el modelo ha "aprendido". bien la ecuación logística que genera la serie.
+
+La función logística genera una serie de una sola variable. Probemos la red con un sistema de dos ecuaciones con dos variables, el sistema de Henon , que además genera series de tiempo con dinámica caótica, con estas ecuaciones
+
+$$X_{n+1}=1+Y_{n}-1.4X^2_n$$
+$$Y_{n+1}=0.3X_n$$
+
+Generamos una serie con $1000$ términos de la variable $x$ del sistema Henon en formato csv . Ahora tenemos una serie que depende de dos variables, generada por un sistema del cual tenemos información incompleta porque solo tenemos la serie de una de las dos variables. Podemos repetir el procedimiento anterior
+
+```{r}
+shen<-as.ts(read.csv("henon-x.csv",F))
+y<-as.zoo(shen)
+x1<-Lag(y,k=1)
+x2<-Lag(y,k=2)
+x3<-Lag(y,k=3)
+x4<-Lag(y,k=4)
+x5<-Lag(y,k=5)
+x6<-Lag(y,k=6)
+x7<-Lag(y,k=7)
+x8<-Lag(y,k=8)
+x9<-Lag(y,k=9)
+x10<-Lag(y,k=10)
+slog<-cbind(y,x1,x2,x3,x4,x5,x6,x7,x8,x9,x10)
+slog<-slog[-(1:10),]
+inputs<-(inputs - min(y))/(max(y)-min(y))
+outputs<-(outputs - min(y))/(max(y)-min(y))
+```
+
+En este caso, los valores de la serie están entre -1 y 1, por lo que tenemos que estandarizar para tomar valores entre 0 y 1, ya que de esta manera el modelo se ajusta mejor.
+
+Y, de nuevo, realizamos una predicción de los valores restantes de la serie:
+
+
+```{r}
+pred<-predict(fit,inputs[-train])
+y<-as.vector(outputs[-train])
+plot(y,type="l")
+lines(pred,col="red")
+```
+
+Podemos comprobar que el ajuste no es tan perfecto. Esto lo discutiremos con mayor precisión en el Encuentro sincrónico
+
+
+
+

@@ -1,0 +1,57 @@
+---
+title: <span style="color:#FF7F00">**M3U1_Contexto**
+author: " "
+date: " "
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+
+c1="034a94" #color naranja-primario
+c2="FF7F00" #color azul oscuro-secundario
+c3="0EB0C6" #color azul claro-terciario
+c4="-686868" #color gris-texto
+```
+
+# <span style="color:#034a94"> **RNN y Series de Tiempo**
+
+En las redes neuronales (RN), se espera que la respuesta de la red sea independiente de los datos que ha evaluado anteriormente. Es decir, no se espera que tenga memoria de lo que ha procesado y su respuesta no debe depender de los datos procesados con anterioridad. La idea de las redes neuronales recurrentes (RNN) es hacer uso de informacion secuencial. Esto es, para procesar datos en los cuales hay una dependencia de los datos procesados anteriormente; por ejemplo, la predicción del precio de las acciones de twitter, dada la información actual y los precios recientes del dicha acción.
+
+<div style="text-align: justify">
+Debido a la naturaleza de las series de tiempo, la RNN son una herramienta muy apropiada para modelarlas, ya que son un tipo de redes con una arquitectura que implementa una cierta memoria y, por lo tanto, un sentido temporal. Esto se consigue implementando algunas neuronas que reciben como entrada la salida de una de las capas e inyectan su salida en una de las capas de un nivel anterior a ella. 
+</div>
+
+[!["RNN"](C:\Users\isabel.garcia\OneDrive - PUJ Cali\Desktop\Modulo 3\Unidad 1\Insumos\1.Contexto\RNN.png)
+
+
+# <span style="color:#034a94"> **Redes ELMAN y JORDAN**
+
+Las entradas de estas neuronas, se toman desde las salidas de las neuronas de una de las capas ocultas, y sus salidas se conectan de nuevo en las entradas de esta misma capa, lo que proporciona una especie de memoria sobre el estado anterior de dicha capa. El esquema es como en la sigueinte figura, donde X es la entrada, S la salida y el nodo amarillo es la neurona de la capa de contexto:
+
+[!["ELMAN"](C:\Users\isabel.garcia\OneDrive - PUJ Cali\Desktop\Modulo 3\Unidad 1\Insumos\1.Contexto\ELMAN.png)
+[!["JORDAN"](C:\Users\isabel.garcia\OneDrive - PUJ Cali\Desktop\Modulo 3\Unidad 1\Insumos\1.Contexto\JORDAN.png)
+
+
+En las redes de Jordan, la diferencia está en que la entrada de las neuronas de la capa de contexto se toma desde la salida de la red.
+
+# <span style="color:#034a94"> **Conclusión**
+
+-Una red neuronal recurrente no tiene una estructura de capas definida, sino que permiten conexiones arbitrarias entre las neuronas, incluso pudiendo crear ciclos, con esto se consigue crear la temporalidad, permitiendo que la red tenga memoria.
+
+-Los RNN se denominan recurrentes porque realizan la misma tarea para cada elemento de una secuencia, y la salida depende de los calculos anteriores.
+
+## <span style="color:#0EB0C6"> **Ventajas**
+
+- RNN puede procesar entradas de cualquier longitud.
+- Se modela un modelo RNN para recordar cada información a lo largo del tiempo, lo cual es muy útil en cualquier predictor de series temporales.  Incluso si el tamaño de entrada es mayor, el tamaño del modelo no aumenta.
+- Los pesos se pueden compartir a través de los pasos de tiempo.
+RNN puede usar su memoria interna para procesar la serie arbitraria de entradas, lo que no es el caso de las redes neuronales feedforward.
+
+## <span style="color:#0EB0C6"> **Desventajas**
+
+- Debido a su naturaleza recurrente, el cómputo es lento.
+- El entrenamiento de modelos RNN puede ser difícil.
+- Si estamos usando relu o tanh como funciones de activación, se vuelve muy difícil procesar secuencias muy largas.
+- Propenso a problemas como explosión y desaparición de gradientes.
